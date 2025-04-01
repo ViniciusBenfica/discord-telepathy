@@ -1,27 +1,31 @@
-import axios from "axios";
+import championsData from "./champions.json" assert { type: "json" };
+
+interface ChampionData {
+	name: string;
+	imageUrl: string;
+}
 
 export class Champion {
-  private _name: string;
-  private _imageUrl: string;
+	private _name: string;
+	private _imageUrl: string;
 
-  constructor(name: string, imageUrl: string) {
-    this._name = name;
-    this._imageUrl = imageUrl;
-  }
+	constructor(name: string, imageUrl: string) {
+		this._name = name;
+		this._imageUrl = imageUrl;
+	}
 
-  static async loadAll() {
-    const { data } = await axios.get(`https://ddragon.leagueoflegends.com/cdn/${process.env.LOL_PATH}/data/pt_BR/champion.json`);
-    return Object.values(data.data).map((champ: any) => new Champion(
-      champ.name,
-      `https://ddragon.leagueoflegends.com/cdn/${process.env.LOL_PATH}/img/champion/${champ.image.full}`
-    ));
-  }
+	static loadAll(): Champion[] {
+		return championsData.champions.map(
+			(champion: ChampionData) =>
+				new Champion(champion.name, champion.imageUrl),
+		);
+	}
 
 	get name() {
-    return this._name;
-  }
+		return this._name;
+	}
 
 	get imageUrl() {
-    return this._imageUrl;
-  }
+		return this._imageUrl;
+	}
 }
