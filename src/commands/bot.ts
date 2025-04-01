@@ -74,6 +74,10 @@ export class Bot {
 					},
 				],
 			},
+			{
+				name: "surrender",
+				description: "End the current game",
+			},
 		];
 
 		try {
@@ -130,6 +134,18 @@ export class Bot {
 				} else {
 					await interaction.reply("No champions have been chosen yet.");
 				}
+			}
+
+			if (interaction.commandName === "surrender") {
+				if (!this._game.active) {
+					await interaction.reply("There is no active game to surrender.");
+					return;
+				}
+
+				this._game.finishGame();
+				await interaction.reply(
+					"Game has been surrendered. Use /telepathy to start a new game.",
+				);
 			}
 
 			if (interaction.commandName === "champion") {
