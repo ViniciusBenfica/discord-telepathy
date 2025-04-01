@@ -11,7 +11,7 @@ import { Game } from "../domain/game.js";
 
 export class Bot {
 	private _client: Client;
-	private _game: Game;
+	private _games: Map<string, Game>;
 	private _championsData: Champion[];
 
 	constructor() {
@@ -22,16 +22,23 @@ export class Bot {
 				GatewayIntentBits.MessageContent,
 			],
 		});
-		this._game = new Game();
+		this._games = new Map();
 		this._championsData = [];
 
 		this._client.login(process.env.DISCORD_TOKEN as string);
 	}
 
+	private getGame(channelId: string): Game {
+		if (!this._games.has(channelId)) {
+			this._games.set(channelId, new Game());
+		}
+		return this._games.get(channelId) as Game;
+	}
+
 	async start() {
 		this._client.on("ready", async () => {
 			console.log(`Logged in as ${this._client.user?.tag}!`);
-			this._championsData = await Champion.loadAll();
+			this._championsData = Champion.loadAll();
 			await this.registerCommands();
 		});
 
@@ -81,19 +88,14 @@ export class Bot {
 		];
 
 		try {
-			console.log("Started refreshing application (/) commands.");
-			// await rest.put(
-			//   Routes.applicationCommands(process.env.DISCORD_BOT_ID as string),
-			//   { body: commands }
-			// );
 			await rest.put(
-				Routes.applicationGuildCommands(
-					process.env.DISCORD_BOT_ID as string,
-					"1021421122404753480",
-				),
+				Routes.applicationCommands(process.env.DISCORD_BOT_ID as string),
 				{ body: commands },
 			);
-			console.log("Successfully reloaded application (/) commands.");
+			await rest.put(
+				Routes.applicationCommands(process.env.DISCORD_BOT_ID as string),
+				{ body: commands },
+			);
 		} catch (error) {
 			console.error(error);
 		}
@@ -101,11 +103,14 @@ export class Bot {
 
 	async handleInteraction(interaction: Interaction) {
 		if (interaction.isChatInputCommand()) {
+			const channelId = interaction.channelId;
+			const game = this.getGame(channelId);
+
 			if (interaction.commandName === "telepathy") {
 				const playerCount = interaction.options.getInteger("players");
 
 				try {
-					this._game.startGame(playerCount as number);
+					game.startGame(playerCount as number);
 					await interaction.reply(
 						`Starting a telepathy game with **${playerCount}** players!`,
 					);
@@ -119,14 +124,14 @@ export class Bot {
 			}
 
 			if (interaction.commandName === "show_chosen") {
-				if (!this._game.active) {
+				if (!game.active) {
 					await interaction.reply(
 						"The game has not started. Use /telepathy <number_of_players> to start the game.",
 					);
 					return;
 				}
 
-				const chosenChampions = this._game.getChosenChampions();
+				const chosenChampions = game.getChosenChampions();
 				if (chosenChampions.length > 0) {
 					await interaction.reply(
 						`Champions chosen so far: ${chosenChampions.join(", ")}`,
@@ -137,19 +142,19 @@ export class Bot {
 			}
 
 			if (interaction.commandName === "surrender") {
-				if (!this._game.active) {
+				if (!game.active) {
 					await interaction.reply("There is no active game to surrender.");
 					return;
 				}
 
-				this._game.finishGame();
+				game.finishGame();
 				await interaction.reply(
 					"Game has been surrendered. Use /telepathy to start a new game.",
 				);
 			}
 
 			if (interaction.commandName === "champion") {
-				if (!this._game.active) {
+				if (!game.active) {
 					await interaction.reply(
 						"The game has not started. Use /telepathy <number_of_players> to start the game.",
 					);
@@ -177,8 +182,8 @@ export class Bot {
 						interaction.user.username;
 					const championImage = champion.imageUrl;
 
-					this._game.checkChooseChampion(championName);
-					const choice = this._game.chooseChampionInRound(
+					game.checkChooseChampion(championName);
+					const choice = game.chooseChampionInRound(
 						playerId,
 						playerName,
 						championName,
@@ -199,25 +204,25 @@ export class Bot {
 						});
 					}
 
-					if (this._game.allPlayersHaveChosenForRound()) {
-						if (this._game.isRoundProcessing()) {
+					if (game.allPlayersHaveChosenForRound()) {
+						if (game.isRoundProcessing()) {
 							return;
 						}
 
-						this._game.setRoundProcessing(true);
+						game.setRoundProcessing(true);
 
-						const playerChoices = this._game.getPlayerChoices();
+						const playerChoices = game.getPlayerChoices();
 
 						const embeds = playerChoices.map((choice) => ({
 							title: `${choice.playerName} chose ${choice.championName.charAt(0).toUpperCase() + choice.championName.slice(1)}`,
 							image: { url: choice.championImage },
 						}));
 
-						if (this._game.didPlayersWinRound()) {
+						if (game.didPlayersWinRound()) {
 							const channel = interaction.channel;
 							if (channel && "send" in channel) {
 								await channel.send({
-									content: `🎉 **VICTORY!** 🎉\nAll players chose **${champion.name}**! You win round ${this._game.roundCount}! 🏆`,
+									content: `🎉 **VICTORY!** 🎉\nAll players chose **${champion.name}**! You win round ${game.roundCount}! 🏆`,
 									files: [champion.imageUrl],
 								});
 								await channel.send({
@@ -226,12 +231,12 @@ export class Bot {
 									],
 								});
 							}
-							this._game.finishGame();
+							game.finishGame();
 						} else {
 							const channel = interaction.channel;
 							if (channel && "send" in channel) {
 								await channel.send({
-									content: `Players picked different champions. You lost the round. ${this._game.roundCount}.`,
+									content: `Players picked different champions. You lost the round. ${game.roundCount}.`,
 									embeds,
 								});
 								await channel.send({
@@ -240,12 +245,12 @@ export class Bot {
 									],
 								});
 								await channel.send({
-									content: `**Round ${this._game.roundCount + 1} started! chose your champion**`,
+									content: `**Round ${game.roundCount + 1} started! chose your champion**`,
 								});
 							}
-							this._game.finisheRound();
+							game.finisheRound();
 						}
-						this._game.setRoundProcessing(false);
+						game.setRoundProcessing(false);
 					}
 				} catch (error) {
 					await interaction.reply(
@@ -260,8 +265,10 @@ export class Bot {
 		}
 
 		if (interaction.isAutocomplete()) {
+			const channelId = interaction.channelId;
+			const game = this.getGame(channelId);
 			const focusedOption = interaction.options.getFocused();
-			const chosenChampions = this._game
+			const chosenChampions = game
 				.getChosenChampions()
 				.map((champ) => champ.toLowerCase());
 			const filteredChampions = this._championsData
