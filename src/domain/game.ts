@@ -1,118 +1,128 @@
 export type PlayerChoice = {
-  playerId: string;
-  playerName: string;
-  championName: string;
-  championImage: string;
+	playerId: string;
+	playerName: string;
+	championName: string;
+	championImage: string;
 };
 
 export class Game {
-  private _active: boolean;
-  private _roundCount: number;
-  private _playerCount: number;
-  private _gameChosenChampions: Map<string, boolean> = new Map();
-  private _playerChoices: PlayerChoice[] = [];
-  private _roundProcessing: boolean = false;
+	private _active: boolean;
+	private _roundCount: number;
+	private _playerCount: number;
+	private _gameChosenChampions: Map<string, boolean> = new Map();
+	private _playerChoices: PlayerChoice[] = [];
+	private _roundProcessing = false;
 
-  constructor() {
-    this._roundCount = 0;
-    this._playerCount = 0;
-    this._active = false;
-  }
+	constructor() {
+		this._roundCount = 0;
+		this._playerCount = 0;
+		this._active = false;
+	}
 
-  startGame(playerCount: number) {
-    if (this._active) {
-      throw new Error("A game is already in progress.");
-    }
+	startGame(playerCount: number) {
+		if (this._active) {
+			throw new Error("A game is already in progress.");
+		}
 
-    if (playerCount < 2) {
-      throw new Error("Please enter a valid number of players (at least 2).");
-    }
+		if (playerCount < 2) {
+			throw new Error("Please enter a valid number of players (at least 2).");
+		}
 
-    this._playerCount = playerCount;
-    this._active = true;
-    this._roundCount = 1;
-    this._gameChosenChampions.clear();
-    this._playerChoices = [];
-  }
+		this._playerCount = playerCount;
+		this._active = true;
+		this._roundCount = 1;
+		this._gameChosenChampions.clear();
+		this._playerChoices = [];
+	}
 
-  finishGame() {
-    this._active = false;
-  }
+	finishGame() {
+		this._active = false;
+	}
 
-  finisheRound() {
-    for (const choice of this._playerChoices) {
-      this._gameChosenChampions.set(choice.championName.toLowerCase(), true);
-    }
+	finisheRound() {
+		for (const choice of this._playerChoices) {
+			this._gameChosenChampions.set(choice.championName.toLowerCase(), true);
+		}
 
-    this._playerChoices = [];
-    this._roundCount++;
-  }
+		this._playerChoices = [];
+		this._roundCount++;
+	}
 
-  checkChooseChampion(championName: string) {
-    if (this._gameChosenChampions.has(championName.toLowerCase())) {
-      throw new Error(`${championName.charAt(0).toUpperCase() + championName.slice(1)} has already been chosen in the game.`);
-    }
-  }
+	checkChooseChampion(championName: string) {
+		if (this._gameChosenChampions.has(championName.toLowerCase())) {
+			throw new Error(
+				`${championName.charAt(0).toUpperCase() + championName.slice(1)} has already been chosen in the game.`,
+			);
+		}
+	}
 
-  chooseChampionInRound(playerId: string, playerName: string, championName: string, championImage: string) {
-    const existingChoiceIndex = this._playerChoices.findIndex(choice => choice.playerId === playerId);
+	chooseChampionInRound(
+		playerId: string,
+		playerName: string,
+		championName: string,
+		championImage: string,
+	) {
+		const existingChoiceIndex = this._playerChoices.findIndex(
+			(choice) => choice.playerId === playerId,
+		);
 
-    if (existingChoiceIndex !== -1) {
-      this._playerChoices[existingChoiceIndex] = {
-        playerId,
-        playerName,
-        championName,
-        championImage
-      };
+		if (existingChoiceIndex !== -1) {
+			this._playerChoices[existingChoiceIndex] = {
+				playerId,
+				playerName,
+				championName,
+				championImage,
+			};
 
-      return true
-    } 
+			return true;
+		}
 
-   
-    this._playerChoices.push({
-      playerId,
-      playerName,
-      championName,
-      championImage
-    });
-    
-    return false
-  }
+		this._playerChoices.push({
+			playerId,
+			playerName,
+			championName,
+			championImage,
+		});
 
-  allPlayersHaveChosenForRound(): boolean {
-    return this._playerChoices.length === this._playerCount;
-  }
+		return false;
+	}
 
-  didPlayersWinRound(): boolean {
-    const choices = this._playerChoices.map(choice => choice.championName.toLowerCase());
-    return choices.every(champion => champion === choices[0]);
-  }
+	allPlayersHaveChosenForRound(): boolean {
+		return this._playerChoices.length === this._playerCount;
+	}
 
-  getPlayerChoices(): PlayerChoice[] {
-    return [...this._playerChoices];
-  }
+	didPlayersWinRound(): boolean {
+		const choices = this._playerChoices.map((choice) =>
+			choice.championName.toLowerCase(),
+		);
+		return choices.every((champion) => champion === choices[0]);
+	}
 
-  getChosenChampions() {
-    return Array.from(this._gameChosenChampions.keys());
-  }
+	getPlayerChoices(): PlayerChoice[] {
+		return [...this._playerChoices];
+	}
 
-  public isRoundProcessing(): boolean {
-    return this._roundProcessing;
-  }
-  
-  public setRoundProcessing(value: boolean): void {
-    this._roundProcessing = value;
-  }
+	getChosenChampions() {
+		return Array.from(this._gameChosenChampions.keys());
+	}
 
-  get active() {
-    return this._active;
-  }
+	public isRoundProcessing(): boolean {
+		return this._roundProcessing;
+	}
 
-  get roundCount() {
-    return this._roundCount;
-  }
+	public setRoundProcessing(value: boolean): void {
+		this._roundProcessing = value;
+	}
 
-  get playerCount() {
-    return this._playerCount;
-  }
+	get active() {
+		return this._active;
+	}
+
+	get roundCount() {
+		return this._roundCount;
+	}
+
+	get playerCount() {
+		return this._playerCount;
+	}
 }
