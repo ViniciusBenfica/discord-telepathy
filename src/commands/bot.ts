@@ -92,10 +92,6 @@ export class Bot {
 				Routes.applicationCommands(process.env.DISCORD_BOT_ID as string),
 				{ body: commands },
 			);
-			await rest.put(
-				Routes.applicationCommands(process.env.DISCORD_BOT_ID as string),
-				{ body: commands },
-			);
 		} catch (error) {
 			console.error(error);
 		}
