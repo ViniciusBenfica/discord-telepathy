@@ -1,4 +1,4 @@
-import championsData from "./champions.json" assert { type: "json" };
+import championsData from "./champions.json" with { type: "json" };
 
 interface ChampionData {
 	name: string;
